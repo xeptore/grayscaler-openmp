@@ -81,17 +81,14 @@ struct transform_row_params {
   unsigned long thread_id;
 };
 
-void *transform_rows(void *param) {
-  struct transform_row_params *params = (struct transform_row_params *)param;
-  for (size_t i = 0; i < params->num_rows; i++) {
+void transform_rows(struct transform_row_params params) {
+  for (size_t i = 0; i < params.num_rows; i++) {
     transform_input_image_row(
-      params->scanned_lines[i],
-      params->output_lines[i],
-      params->decompressor->output_width
+      params.scanned_lines[i],
+      params.output_lines[i],
+      params.decompressor->output_width
     );
   }
-
-  return NULL;
 }
 
 int transform_image(const char *input_filename, const char *output_filename) {
@@ -141,8 +138,7 @@ int transform_image(const char *input_filename, const char *output_filename) {
 
   unsigned char *all_buffer = malloc(
     decompressor.image_height * input_image_row_length +
-    compressor.image_height * output_image_row_length +
-    NUM_THREADS * sizeof(struct transform_row_params)
+    compressor.image_height * output_image_row_length
   );
   if (all_buffer == NULL) {
     (void)fprintf(stderr, "failed to allocate enough memory.\n");
@@ -170,26 +166,20 @@ int transform_image(const char *input_filename, const char *output_filename) {
     output_rows_buffer[i] = &output_buffer[i * output_image_row_length];
   }
 
-  pthread_t thread_ids[NUM_THREADS];
-  struct transform_row_params *thread_params_refs[NUM_THREADS];
-
   const unsigned int quotient = decompressor.image_height / NUM_THREADS;
   const unsigned int remainder = decompressor.image_height % NUM_THREADS;
 
   #pragma omp parallel for
   for (size_t i = 0; i < NUM_THREADS; i++) {
     const unsigned long int worker_quotient = (i < remainder) ? (quotient + 1) : (quotient);
-    struct transform_row_params *params = (struct transform_row_params *)&all_buffer[
-      decompressor.image_height * input_image_row_length +
-      compressor.image_height * output_image_row_length +
-      i * sizeof(struct transform_row_params)
-    ];
-    params->decompressor = &decompressor;
-    params->compressor = &compressor;
-    params->scanned_lines = &scan_rows_buffer[i * worker_quotient];
-    params->output_lines = &output_rows_buffer[i * worker_quotient];
-    params->num_rows = worker_quotient;
-    params->thread_id = i;
+    struct transform_row_params params = {
+      .decompressor = &decompressor,
+      .compressor = &compressor,
+      .scanned_lines = &scan_rows_buffer[i * worker_quotient],
+      .output_lines = &output_rows_buffer[i * worker_quotient],
+      .num_rows = worker_quotient,
+      .thread_id = i,
+    };
     transform_rows(params);
   }
 
