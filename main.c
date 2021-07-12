@@ -169,7 +169,7 @@ int transform_image(const char *input_filename, const char *output_filename) {
   const unsigned int quotient = decompressor.image_height / NUM_THREADS;
   const unsigned int remainder = decompressor.image_height % NUM_THREADS;
 
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(NUM_THREADS)
   for (size_t i = 0; i < NUM_THREADS; i++) {
     const unsigned long int worker_quotient = (i < remainder) ? (quotient + 1) : (quotient);
     struct transform_row_params params = {
