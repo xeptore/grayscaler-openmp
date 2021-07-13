@@ -5,7 +5,7 @@
 #include <omp.h>
 #include <memory.h>
 #include <jpeglib.h>
-#include <pthread.h>
+#include <time.h>
 #include "config.h"
 
 const unsigned char INPUT_IMAGE_COMPONENTS_NUMBER = 3;
